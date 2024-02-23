@@ -1,0 +1,3 @@
+﻿liac-arff==2.5.0
+numpy==1.23.1
+pandas==1.4.3
