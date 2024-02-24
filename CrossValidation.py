@@ -2,7 +2,6 @@
 
 
 import numpy as np
-
 import arff
 import random
 import pandas as pd
@@ -38,11 +37,13 @@ class CrossValidation:
         self.y=np.array(y)
         self.classes=np.unique(self.y)
         self.meta=meta
-        #self.dist_matrix,self.unnorm_dist_matrix = self.__calculate_distance_matrix(self.X,distance_func=distance_func)
+        
+        self.class_inxs = class_inds
+        self.dist_matrix_per_class = self.__calculate_distance_matrix(self.X,distance_func=distance_func)
         #self.class_count = self.__count_class_instances()
 
 
-        self.class_inxs = class_inds
+       
 
 
         self.class_count = self.__count_class_instances()
@@ -50,6 +51,9 @@ class CrossValidation:
            print("ERROR: Less than two classes are in the dataset.")
 
         return 
+
+    
+
 
     def __count_class_instances(self):
         '''
@@ -70,6 +74,10 @@ class CrossValidation:
         data = arff.load(open(file, 'r'))['data']
         num_attr = len(data[0])-1
         att=arff.load(open(file, 'r'))['attributes']
+
+
+        self.att = att
+
         meta=[]
         for i in range(len(att)-1):
             if(att[i][1]=="NUMERIC"):
@@ -77,12 +85,16 @@ class CrossValidation:
             else:
                 meta.append(1)
 
-
-        X = np.array([i[:num_attr] for i in data])
+        
+        X = np.array([i[:num_attr] for i in data],dtype=object)
         y = np.array([i[-1] for i in data])
 
 
-        X = np.array(X)
+        
+
+
+
+        '''
         for i in range(len(meta)):
             if meta[i]==1:
                 
@@ -91,13 +103,12 @@ class CrossValidation:
 
         if 1 in meta:
             X = X.astype(np.float64)
+        '''
 
-
-
+        
 
         classes = np.unique(y)
-        y = [np.where(classes == i[-1])[0][0] for i in data]
-        classes = np.unique(y)
+        
         
 
         class_inds = []
@@ -107,7 +118,8 @@ class CrossValidation:
         
 
 
-        X = np.array(X)
+        X = np.array(X,dtype=object)
+        
         y = np.array(y)
         
 
@@ -134,10 +146,25 @@ class CrossValidation:
         unnorm_dist_matrix = np.zeros((len(X),len(X)))
 
         #calculate the ranges of all attributes
-        range_max=np.max(X,axis=0)
-        range_min=np.min(X,axis=0)
+        #range_max=np.max(X,axis=0)
+        #range_min=np.min(X,axis=0)
+
+
+        range_max = np.array([])
+        range_min = np.array([])
+        for attr in range(len(X[0])):
+            
+            if(meta[attr]==0):
+                range_max = np.append(range_max,np.max(X[:,attr]))
+                range_min = np.append(range_min,np.min(X[:,attr]))
+            else:
+                range_max = np.append(range_max,0)
+                range_min = np.append(range_min,0)
+
+        
         #print(range_max)
         #print(range_min)
+        
         for i in range(len(X)): 
             for j in range(i+1,len(X)):
                 #for attribute
@@ -192,33 +219,47 @@ class CrossValidation:
         dist_matrix (numpy.array): A (M*M) matrix containing the distance between all pairs of points in X
         --------
         '''
+
+        dist_matrix_per_class = []
         if(distance_func=="HEOM"):
-            distance_matrix,unnorm_distance_matrix=self.__distance_HEOM()
+            
+
+            for c_count in range(len(self.classes)):
+                X_cls = self.X[self.class_inxs[c_count]]
+                dist_matrix_cls,unnorm_dist_matrix_cls = self.__distance_HEOM(X_cls)
+                dist_matrix_per_class.append(dist_matrix_cls)
+
+
         elif(distance_func=="default"):
-            distance_matrix,unnorm_distance_matrix=self.__distance_HEOM()
+            for c_count in range(len(self.classes)):
+                X_cls = self.X[self.class_inxs[c_count]]
+                dist_matrix_cls,unnorm_dist_matrix_cls = self.__distance_HEOM(X_cls)
+                dist_matrix_per_class.append(dist_matrix_cls)
         
         #add other distance functions
-
-        return distance_matrix,unnorm_distance_matrix
+        
+        return dist_matrix_per_class
     
     
     def __write_arff(self,X_res,y_res,output_folder,file):
         X_res = pd.DataFrame(X_res)
-        y_res = [int(round(numeric_string)) for numeric_string in y_res]
+       
         y_res = pd.DataFrame(y_res)
         
 
         
-        #print(y_res)
-        y_res = pd.DataFrame(y_res)
+        
+        
         
         y_res.rename(columns = {0 : 'class'}, inplace = True)
         df =  X_res.join(y_res)
 
         #print(df)
-        attributes = [(str(j), 'NUMERIC') if X_res[j].dtypes in ['int64', 'float64'] else (j, X_res[j].unique().astype(str).tolist()) for j in X_res]
-        attributes += [('label',['0.0','1.0'])]
+        #attributes = [(str(j), 'NUMERIC') if X_res[j].dtypes in ['int64', 'float64'] else (j, X_res[j].unique().astype(str).tolist()) for j in X_res]
+        #attributes += [('label',['0.0','1.0'])]
 
+
+        attributes = self.att
 
         arff_dic = {
                 'attributes': attributes,
@@ -395,7 +436,7 @@ class CrossValidation:
             cls_inxs = class_inxs[c_count]
 
             
-            dist_matrix_cls,unnorm_dist_matrix_cls = self.__distance_HEOM(X_cls)
+            dist_matrix_cls = self.dist_matrix_per_class[c_count]
                 
             i = 0
             cnt=len(X_cls)
@@ -458,7 +499,7 @@ class CrossValidation:
         for c_count in range(len(self.classes)):
             X_cls = self.X[class_inxs[c_count]]
             y_cls = self.y[class_inxs[c_count]]
-            dist_matrix_cls,unnorm_dist_matrix_cls = self.__distance_HEOM(X_cls)
+            dist_matrix_cls = self.dist_matrix_per_class[c_count]
             cls_inxs = class_inxs[c_count]
 
             
@@ -545,7 +586,7 @@ class CrossValidation:
             cls_inxs = class_inxs[c_count]
 
             
-            dist_matrix_cls,unnorm_dist_matrix_cls = self.__distance_HEOM(X_cls)
+            dist_matrix_cls = self.dist_matrix_per_class[c_count]
                 
             i = 0
             cnt=len(X_cls)
