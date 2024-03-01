@@ -42,7 +42,7 @@ class CrossValidation:
         self.dist_matrix_per_class = self.__calculate_distance_matrix(self.X,distance_func=distance_func)
         #self.class_count = self.__count_class_instances()
 
-
+        
        
 
 
@@ -75,7 +75,6 @@ class CrossValidation:
         num_attr = len(data[0])-1
         att=arff.load(open(file, 'r'))['attributes']
 
-
         self.att = att
 
         meta=[]
@@ -85,7 +84,7 @@ class CrossValidation:
             else:
                 meta.append(1)
 
-        
+ 
         X = np.array([i[:num_attr] for i in data],dtype=object)
         y = np.array([i[-1] for i in data])
 
@@ -243,7 +242,6 @@ class CrossValidation:
     
     def __write_arff(self,X_res,y_res,output_folder,file):
         X_res = pd.DataFrame(X_res)
-       
         y_res = pd.DataFrame(y_res)
         
 
