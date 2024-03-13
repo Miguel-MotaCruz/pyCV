@@ -3,7 +3,7 @@ import arff
 import os
 from io import StringIO
 
-#TODO - take care of strings
+
 
 def convert_dat_to_arff(dataset_file_name, origin_folder, destination_folder=None):
     '''
