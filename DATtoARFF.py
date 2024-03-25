@@ -93,11 +93,12 @@ def convert_dat_to_arff(dataset_file_name, origin_folder, destination_folder=Non
         arff.dump(arff_data, f)
 
 
-def main():
-    for file in os.listdir("datasets"):
+
+def main(DAT_folder="datasets", ARFF_folder="arff_datasets"):
+    for file in os.listdir(DAT_folder):
         if file.endswith(".dat"):
             print(file)
-            convert_dat_to_arff(file, "datasets", "arff_datasets")
+            convert_dat_to_arff(file,DAT_folder, ARFF_folder)
     # convert_dat_to_arff("ionosphere.dat", "datasets")
 
 if __name__ == "__main__":
